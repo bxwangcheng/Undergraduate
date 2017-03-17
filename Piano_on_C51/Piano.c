@@ -201,30 +201,18 @@ void main(void)
 							LCMClear();
 							LCMDisplayString(1,9,"LOW");
 							level=0;
-							/*for(c=0;c<9;c++)
-							{
-								tone[c]=low[c];
-							}*/
 						break;
 
 						case 2:
 							LCMClear();
 							LCMDisplayString(1,9,"MIDDLE");
 							level=1;
-							/*for(c=0;c<9;c++)
-							{
-								tone[c]=middle[c];
-							}*/
 						break;
 
 						case 3:
 							LCMClear();
 							LCMDisplayString(1,9,"HIGH");
 							level=2;
-							/*for(c=0;c<9;c++)
-							{
-								tone[c]=high[c];
-							}*/
 						break;
 					}
 					q++;
