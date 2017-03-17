@@ -44,8 +44,8 @@ unsigned char Displaynote(unsigned char x,unsigned char y);
 unsigned char Displaylevel(unsigned char x,unsigned char y);
 
 unsigned char xdata alltone[3][9]={	{229,217,204,193,182,172,153,136,121},
-																		{115,108,102,97,91,86,77,68,61},
-																		{57,54,51,48,45,43,38,34,30}				};  //包含低中高音
+					{115,108,102,97,91,86,77,68,61},
+					{57,54,51,48,45,43,38,34,30}};  //包含低中高音
 unsigned char xdata tone[]={115,108,102,97,91,86,77,68,61};		//当前音调
 unsigned char xdata low[]={229,217,204,193,182,172,153,136,121};	//低音
 unsigned char xdata middle[]={115,108,102,97,91,86,77,68,61};		//中音
