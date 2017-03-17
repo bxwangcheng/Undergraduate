@@ -46,31 +46,31 @@ unsigned char Displaylevel(unsigned char x,unsigned char y);
 unsigned char xdata alltone[3][9]={	{229,217,204,193,182,172,153,136,121},
 																		{115,108,102,97,91,86,77,68,61},
 																		{57,54,51,48,45,43,38,34,30}				};  //包含低中高音
-unsigned char xdata tone[]={115,108,102,97,91,86,77,68,61};   //当前音调
-unsigned char xdata low[]={229,217,204,193,182,172,153,136,121};  //低音
-unsigned char xdata middle[]={115,108,102,97,91,86,77,68,61};			//中音
-unsigned char xdata high[]={57,54,51,48,45,43,38,34,30};					//高音
+unsigned char xdata tone[]={115,108,102,97,91,86,77,68,61};		//当前音调
+unsigned char xdata low[]={229,217,204,193,182,172,153,136,121};	//低音
+unsigned char xdata middle[]={115,108,102,97,91,86,77,68,61};		//中音
+unsigned char xdata high[]={57,54,51,48,45,43,38,34,30};		//高音
 
 
-unsigned char xdata song1[]={6,5,3,5,7,6,5,6,3,5,6,5,3,2,1,6,5,3,2,2,3,5,5,6,3,2,1,5,3,2,1,6,1,1,15};					//歌曲1音调
-unsigned char xdata beat1[]={16,8,8,8,8,4,4,16,8,4,4,8,4,4,4,4,4,4,16,16,8,8,4,4,12,8,16,16,8,4,4,4,4,16};		//歌曲1节拍
-unsigned char xdata song2[]={1,2,8,8,5,1,3,3,3,5,4,3,5,4,3,2,2,1,0,1,2,3,4,3,2,3,4,5,5,4,3,2,1,15};						//歌曲2音调
-unsigned char xdata beat2[]={7,7,7,7,8,9,1,2,3,6,2,4,4,4,4,12,8,2,2,4,4,4,8,2,2,4,4,4,2,2,4,4,12,};						//歌曲2节拍
-unsigned char xdata song3[]={1,2,8,8,5,1,3,3,3,5,4,3,5,4,3,2,2,1,0,1,2,3,4,3,2,3,4,5,5,4,3,2,1,15};						//歌曲3音调
-unsigned char xdata beat3[]={7,7,7,7,8,9,1,2,3,6,2,4,4,4,4,12,8,2,2,4,4,4,8,2,2,4,4,4,2,2,4,4,12,};						//歌曲3节拍
-unsigned char xdata rec1[5]={0,0,0,0,0}; //音轨1音调
-unsigned char xdata mklevel1[5]={1,1,1,1,1}; //音轨1音高
-unsigned char xdata rec2[5]={1,1,1,1,1}; //音轨2音调
-unsigned char xdata mklevel2[5]={1,1,1,1,1};//音轨2音高
-unsigned char xdata rec3[5]={2,2,2,2,2}; //音轨3
-unsigned char xdata mklevel3[5]={1,1,1,1,1};//音轨3音高
+unsigned char xdata song1[]={6,5,3,5,7,6,5,6,3,5,6,5,3,2,1,6,5,3,2,2,3,5,5,6,3,2,1,5,3,2,1,6,1,1,15};		//歌曲1音调
+unsigned char xdata beat1[]={16,8,8,8,8,4,4,16,8,4,4,8,4,4,4,4,4,4,16,16,8,8,4,4,12,8,16,16,8,4,4,4,4,16};	//歌曲1节拍
+unsigned char xdata song2[]={1,2,8,8,5,1,3,3,3,5,4,3,5,4,3,2,2,1,0,1,2,3,4,3,2,3,4,5,5,4,3,2,1,15};		//歌曲2音调
+unsigned char xdata beat2[]={7,7,7,7,8,9,1,2,3,6,2,4,4,4,4,12,8,2,2,4,4,4,8,2,2,4,4,4,2,2,4,4,12,};		//歌曲2节拍
+unsigned char xdata song3[]={1,2,8,8,5,1,3,3,3,5,4,3,5,4,3,2,2,1,0,1,2,3,4,3,2,3,4,5,5,4,3,2,1,15};		//歌曲3音调
+unsigned char xdata beat3[]={7,7,7,7,8,9,1,2,3,6,2,4,4,4,4,12,8,2,2,4,4,4,8,2,2,4,4,4,2,2,4,4,12,};		//歌曲3节拍
+unsigned char xdata rec1[5]={0,0,0,0,0};	//音轨1音调
+unsigned char xdata mklevel1[5]={1,1,1,1,1};	//音轨1音高
+unsigned char xdata rec2[5]={1,1,1,1,1};	//音轨2音调
+unsigned char xdata mklevel2[5]={1,1,1,1,1};	//音轨2音高
+unsigned char xdata rec3[5]={2,2,2,2,2};	//音轨3
+unsigned char xdata mklevel3[5]={1,1,1,1,1};	//音轨3音高
 unsigned char xdata csong[35];	//当前歌曲音调
 unsigned char xdata cbeat[34];	//当前歌曲节拍
 unsigned char xdata crec[5]={0,1,2,3,4};
 unsigned char xdata cmklevel[5]={1,1,1,1,1};
-unsigned char temp=0;		//判断按键是否已被记录过
-unsigned char t=0;			//录制音符计数
-unsigned char tk=1;			//选择音轨
+unsigned char temp=0;	//判断按键是否已被记录过
+unsigned char t=0;	//录制音符计数
+unsigned char tk=1;	//选择音轨
 unsigned char ms=1;     //选择歌曲
 unsigned char level=1;	//当前音高
 
