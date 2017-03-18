@@ -1,0 +1,2 @@
+Hello I am A, I am used to be copied.
+If my words appear in B.txt, then congratulations!
