@@ -1,0 +1,750 @@
+C51 COMPILER V9.56.0.0   PIANO                                                             03/18/2017 14:40:59 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE PIANO
+OBJECT MODULE PLACED IN .\Objects\Piano.obj
+COMPILER INVOKED BY: D:\Program Files (x86)\Keil_v5\C51\BIN\C51.EXE Piano.c OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND 
+                    -PRINT(.\Listings\Piano.lst) TABS(2) OBJECT(.\Objects\Piano.obj)
+
+line level    source
+
+   1          #include <stdio.h>
+   2          #include <reg51.h>
+   3          #include <absacc.h>
+   4          #include <intrins.h>
+   5          #define BUSYFLAG 0x80
+   6          #define BLINK 0x01
+   7          #define NOBLINK 0x00
+   8          #define LCM_DB P1
+   9          #define KEYBOARD XBYTE[0x7f00]
+  10          
+  11          unsigned int data DelayConst = 140;
+  12          
+  13          sbit LCM_RS = P3^2;
+  14          sbit LCM_RW = P3^3;
+  15          sbit LCM_E = P3^4;
+  16          sbit SPEAKER = P3^5;
+  17          sbit RAM_Write = P3^6;
+  18          sbit RAM_Read =P3^7;
+  19          sbit RAM_Control = P2^7;
+  20          
+  21          unsigned char checkkey();
+  22          unsigned char keyscan();
+  23          void delay(unsigned int i);
+  24          void LCMDelay(int ms);
+  25          unsigned char LCMReadState(void);
+  26          void LCMClear(void);
+  27          void LCMWriteCmd(unsigned char cmd);
+  28          void LCMWriteData(unsigned char dc);
+  29          void LCMInit(void);
+  30          void LCMGotoXY(unsigned char x,unsigned char y);
+  31          void LCMDisplayChar(unsigned char x,unsigned char y,unsigned char ch);
+  32          void LCMDisplayString(unsigned char x,unsigned char y,unsigned char* str);
+  33          void LCMBlink(unsigned char x,unsigned char y,unsigned char cmd);
+  34          void record(unsigned char);
+  35          void gap(unsigned char x);
+  36          
+  37          void sound(unsigned char x,unsigned char y);
+  38          
+  39          void delay8um(unsigned char x);
+  40          void beat_125(unsigned char x);
+  41          void play(unsigned char song[],unsigned char beat[]);
+  42          void playrec(unsigned char mklevel[],unsigned char rec[]);
+  43          unsigned char Displaynote(unsigned char x,unsigned char y);
+  44          unsigned char Displaylevel(unsigned char x,unsigned char y);
+  45          
+  46          unsigned char xdata alltone[3][9]={ {229,217,204,193,182,172,153,136,121},
+  47                    {115,108,102,97,91,86,77,68,61},
+  48                    {57,54,51,48,45,43,38,34,30}};  //包含低中高音
+  49          unsigned char xdata tone[]={115,108,102,97,91,86,77,68,61};   //当前音调
+  50          unsigned char xdata low[]={229,217,204,193,182,172,153,136,121};  //低音
+  51          unsigned char xdata middle[]={115,108,102,97,91,86,77,68,61};   //中音
+  52          unsigned char xdata high[]={57,54,51,48,45,43,38,34,30};    //高音
+  53          
+  54          
+C51 COMPILER V9.56.0.0   PIANO                                                             03/18/2017 14:40:59 PAGE 2   
+
+  55          unsigned char xdata song1[]={6,5,3,5,7,6,5,6,3,5,6,5,3,2,1,6,5,3,2,2,3,5,5,6,3,2,1,5,3,2,1,6,1,1,15};   //�
+             -��曲1音调
+  56          unsigned char xdata beat1[]={16,8,8,8,8,4,4,16,8,4,4,8,4,4,4,4,4,4,16,16,8,8,4,4,12,8,16,16,8,4,4,4,4,16};
+             -  //歌曲1节拍
+  57          unsigned char xdata song2[]={1,2,8,8,5,1,3,3,3,5,4,3,5,4,3,2,2,1,0,1,2,3,4,3,2,3,4,5,5,4,3,2,1,15};   //歌
+             -曲2音调
+  58          unsigned char xdata beat2[]={7,7,7,7,8,9,1,2,3,6,2,4,4,4,4,12,8,2,2,4,4,4,8,2,2,4,4,4,2,2,4,4,12,};   //歌
+             -曲2节拍
+  59          unsigned char xdata song3[]={1,2,8,8,5,1,3,3,3,5,4,3,5,4,3,2,2,1,0,1,2,3,4,3,2,3,4,5,5,4,3,2,1,15};   //歌
+             -曲3音调
+  60          unsigned char xdata beat3[]={7,7,7,7,8,9,1,2,3,6,2,4,4,4,4,12,8,2,2,4,4,4,8,2,2,4,4,4,2,2,4,4,12,};   //歌
+             -曲3节拍
+  61          unsigned char xdata rec1[5]={0,0,0,0,0};  //音轨1音调
+  62          unsigned char xdata mklevel1[5]={1,1,1,1,1};  //音轨1音高
+  63          unsigned char xdata rec2[5]={1,1,1,1,1};  //音轨2音调
+  64          unsigned char xdata mklevel2[5]={1,1,1,1,1};  //音轨2音高
+  65          unsigned char xdata rec3[5]={2,2,2,2,2};  //音轨3
+  66          unsigned char xdata mklevel3[5]={1,1,1,1,1};  //音轨3音高
+  67          unsigned char xdata csong[35];  //当前歌曲音调
+  68          unsigned char xdata cbeat[34];  //当前歌曲节拍
+  69          unsigned char xdata crec[5]={0,1,2,3,4};
+  70          unsigned char xdata cmklevel[5]={1,1,1,1,1};
+  71          unsigned char temp=0; //判断按键是否已被记录过
+  72          unsigned char t=0;  //录制音符计数
+  73          unsigned char tk=1; //选择音轨
+  74          unsigned char ms=1;     //选择歌曲
+  75          unsigned char level=1;  //当前音高
+  76          
+  77          
+  78          /*******************************************************主程序*****************************************
+             -***************/
+  79          void main(void)
+  80          {
+  81   1        unsigned char key;
+  82   1        unsigned char q=1;
+  83   1        unsigned char c;
+  84   1        LCMInit();
+  85   1        LCMClear();
+  86   1        LCMWriteCmd(0x0c);
+  87   1        LCMDisplayString(0,5,"Welcome!");
+  88   1        LCMDisplayString(1,0,"----------------");
+  89   1        while(1)
+  90   1        {
+  91   2          key=keyscan();
+  92   2          switch(key)
+  93   2          {
+  94   3            case 0:
+  95   3              LCMClear();
+  96   3              LCMDisplayString(0,7,"Do");
+  97   3              sound(level,0);
+  98   3              temp=1;
+  99   3              record(0);
+ 100   3            break;
+ 101   3            
+ 102   3            case 1:
+ 103   3              LCMClear();
+ 104   3              LCMDisplayString(0,7,"Mi");
+ 105   3              sound(level,4);
+ 106   3              temp=1;
+ 107   3              record(4);
+ 108   3            break;
+ 109   3            
+C51 COMPILER V9.56.0.0   PIANO                                                             03/18/2017 14:40:59 PAGE 3   
+
+ 110   3            case 2:
+ 111   3              LCMClear();
+ 112   3              LCMDisplayString(0,7,"Si");
+ 113   3              sound(level,8);
+ 114   3              temp=1;
+ 115   3              record(8);
+ 116   3            break;
+ 117   3            
+ 118   3            case 3:
+ 119   3              start3:
+ 120   3              for(;ms<4;)
+ 121   3              {
+ 122   4                switch(ms)
+ 123   4                {
+ 124   5                  case 1:
+ 125   5                    LCMClear();
+ 126   5                    LCMDisplayString(0,5,"Now on");
+ 127   5                    LCMDisplayString(1,4,"Music  1");
+ 128   5                    for(c=0;c<35;c++)
+ 129   5                    {
+ 130   6                      csong[c]=song1[c];
+ 131   6                    }
+ 132   5                    for(c=0;c<35;c++)
+ 133   5                    {
+ 134   6                      cbeat[c]=beat1[c];
+ 135   6                    }
+ 136   5                  break;
+ 137   5      
+ 138   5                  case 2:
+ 139   5                    LCMClear();
+ 140   5                    LCMDisplayString(0,5,"Now on");
+ 141   5                    LCMDisplayString(1,4,"Music  2");
+ 142   5                    for(c=0;c<35;c++)
+ 143   5                    {
+ 144   6                      csong[c]=song2[c];
+ 145   6                    }
+ 146   5                    for(c=0;c<35;c++)
+ 147   5                    {
+ 148   6                      cbeat[c]=beat2[c];
+ 149   6                    }
+ 150   5                  break;
+ 151   5      
+ 152   5                  case 3:
+ 153   5                    LCMClear();
+ 154   5                    LCMDisplayString(0,5,"Now on");
+ 155   5                    LCMDisplayString(1,4,"Music  3");
+ 156   5                    for(c=0;c<35;c++)
+ 157   5                    {
+ 158   6                      csong[c]=song3[c];
+ 159   6                    }
+ 160   5                    for(c=0;c<35;c++)
+ 161   5                    {
+ 162   6                      cbeat[c]=beat3[c];
+ 163   6                    }
+ 164   5                  break;
+ 165   5                }
+ 166   4                ms++;
+ 167   4                goto jump3;
+ 168   4              }
+ 169   3              ms=1;
+ 170   3              goto start3;
+ 171   3            jump3:break;
+C51 COMPILER V9.56.0.0   PIANO                                                             03/18/2017 14:40:59 PAGE 4   
+
+ 172   3            
+ 173   3            case 4:
+ 174   3              LCMClear();
+ 175   3              LCMDisplayString(0,7,"Do#");
+ 176   3              sound(level,1);
+ 177   3              temp=1;
+ 178   3              record(1);
+ 179   3            break;
+ 180   3            
+ 181   3            case 5:
+ 182   3              LCMClear();
+ 183   3              LCMDisplayString(0,7,"Fa");
+ 184   3              sound(level,5);
+ 185   3              temp=1;
+ 186   3              record(5);
+ 187   3            break;
+ 188   3            
+ 189   3            case 6:
+ 190   3              start6:
+ 191   3              for(;q<4;)
+ 192   3              {
+ 193   4                switch(q)
+ 194   4                {
+ 195   5                  case 1:
+ 196   5                    LCMClear();
+ 197   5                    LCMDisplayString(1,9,"LOW");
+ 198   5                    level=0;
+ 199   5                  break;
+ 200   5      
+ 201   5                  case 2:
+ 202   5                    LCMClear();
+ 203   5                    LCMDisplayString(1,9,"MIDDLE");
+ 204   5                    level=1;
+ 205   5                  break;
+ 206   5      
+ 207   5                  case 3:
+ 208   5                    LCMClear();
+ 209   5                    LCMDisplayString(1,9,"HIGH");
+ 210   5                    level=2;
+ 211   5                  break;
+ 212   5                }
+ 213   4                q++;
+ 214   4                goto jump6;
+ 215   4              }
+ 216   3              q=1;
+ 217   3              goto start6;
+ 218   3            jump6:break;
+ 219   3                      
+ 220   3            case 7:
+ 221   3              switch(ms)
+ 222   3                {
+ 223   4                  case 2:
+ 224   4                    LCMClear();
+ 225   4                    LCMDisplayString(0,0,"Play Music 1 ..");
+ 226   4                    play(csong,cbeat);
+ 227   4                  break;
+ 228   4      
+ 229   4                  case 3:
+ 230   4                    LCMClear();
+ 231   4                    LCMDisplayString(0,0,"Play Music 2 ..");
+ 232   4                    play(csong,cbeat);
+ 233   4                  break;
+C51 COMPILER V9.56.0.0   PIANO                                                             03/18/2017 14:40:59 PAGE 5   
+
+ 234   4      
+ 235   4                  case 4:
+ 236   4                    LCMClear();
+ 237   4                    LCMDisplayString(0,0,"Play Music 3 ..");
+ 238   4                    play(csong,cbeat);
+ 239   4                  break;
+ 240   4                }
+ 241   3            break;
+ 242   3      
+ 243   3            case 8:
+ 244   3              LCMClear();
+ 245   3              LCMDisplayString(0,7,"Re");
+ 246   3              sound(level,2);
+ 247   3              temp=1;
+ 248   3              record(2);
+ 249   3            break;
+ 250   3            
+ 251   3            case 9:
+ 252   3              LCMClear();
+ 253   3              LCMDisplayString(0,7,"So");
+ 254   3              sound(level,6);
+ 255   3              temp=1;
+ 256   3              record(6);
+ 257   3            break;
+ 258   3            
+ 259   3            case 10:
+ 260   3              LCMClear();
+ 261   3              LCMDisplayString(0,0,"Please play");
+ 262   3              LCMDisplayString(1,9,"5 notes");
+ 263   3              t=0;
+ 264   3            break;
+ 265   3            
+ 266   3            case 11:
+ 267   3              switch(tk)
+ 268   3                {
+ 269   4                  case 2:
+ 270   4                    LCMClear();
+ 271   4                    LCMDisplayString(0,0,"1:");
+ 272   4                    playrec(mklevel1,rec1);
+ 273   4                  break;
+ 274   4      
+ 275   4                  case 3:
+ 276   4                    LCMClear();
+ 277   4                    LCMDisplayString(0,0,"2:");
+ 278   4                    playrec(mklevel2,rec2);
+ 279   4                  break;
+ 280   4      
+ 281   4                  case 4:
+ 282   4                    LCMClear();
+ 283   4                    LCMDisplayString(0,0,"3:");
+ 284   4                    playrec(mklevel3,rec3);
+ 285   4                  break;
+ 286   4                }
+ 287   3            break;
+ 288   3            
+ 289   3            case 12:
+ 290   3              LCMClear();
+ 291   3              LCMDisplayString(0,7,"Re#");
+ 292   3              sound(level,3);
+ 293   3              temp=1;
+ 294   3              record(3);
+ 295   3            break;
+C51 COMPILER V9.56.0.0   PIANO                                                             03/18/2017 14:40:59 PAGE 6   
+
+ 296   3            
+ 297   3            case 13:
+ 298   3              LCMClear();
+ 299   3              LCMDisplayString(0,7,"La");
+ 300   3              sound(level,7);
+ 301   3              temp=1;
+ 302   3              record(7);
+ 303   3            break;
+ 304   3            
+ 305   3            case 14:
+ 306   3              switch(tk)
+ 307   3                {
+ 308   4                  case 2:
+ 309   4                    LCMClear();
+ 310   4                    LCMDisplayString(0,0,"Recorded to");
+ 311   4                    LCMDisplayString(1,9,"Track 1");
+ 312   4                    for(c=0;c<5;c++)
+ 313   4                    {
+ 314   5                      rec1[c]=crec[c];
+ 315   5                      mklevel1[c]=cmklevel[c];
+ 316   5                    }
+ 317   4                    t=0;
+ 318   4                  break;
+ 319   4      
+ 320   4                  case 3:
+ 321   4                    LCMClear();
+ 322   4                    LCMDisplayString(0,0,"Recorded to");
+ 323   4                    LCMDisplayString(1,9,"Track 2");
+ 324   4                    for(c=0;c<5;c++)
+ 325   4                    {
+ 326   5                      rec2[c]=crec[c];
+ 327   5                      mklevel2[c]=cmklevel[c];
+ 328   5                    }
+ 329   4                    t=0;
+ 330   4                  break;
+ 331   4      
+ 332   4                  case 4:
+ 333   4                    LCMClear();
+ 334   4                    LCMDisplayString(0,0,"Recorded to");
+ 335   4                    LCMDisplayString(1,9,"Track 3");
+ 336   4                    for(c=0;c<5;c++)
+ 337   4                    {
+ 338   5                      rec3[c]=crec[c];
+ 339   5                      mklevel3[c]=cmklevel[c];
+ 340   5                    }
+ 341   4                    t=0;
+ 342   4                  break;
+ 343   4                }
+ 344   3            break;
+ 345   3      
+ 346   3            case 15:
+ 347   3              start15:
+ 348   3              for(;tk<4;)
+ 349   3              {
+ 350   4                switch(tk)
+ 351   4                {
+ 352   5                  case 1:
+ 353   5                    LCMClear();
+ 354   5                    LCMDisplayString(0,5,"Now on");
+ 355   5                    LCMDisplayString(1,4,"Track  1");
+ 356   5                  break;
+ 357   5      
+C51 COMPILER V9.56.0.0   PIANO                                                             03/18/2017 14:40:59 PAGE 7   
+
+ 358   5                  case 2:
+ 359   5                    LCMClear();
+ 360   5                    LCMDisplayString(0,5,"Now on");
+ 361   5                    LCMDisplayString(1,4,"Track  2");
+ 362   5                  break;
+ 363   5      
+ 364   5                  case 3:
+ 365   5                    LCMClear();
+ 366   5                    LCMDisplayString(0,5,"Now on");
+ 367   5                    LCMDisplayString(1,4,"Track  3");
+ 368   5                  break;
+ 369   5                }
+ 370   4                tk++;
+ 371   4                goto jump15;
+ 372   4              }
+ 373   3              tk=1;
+ 374   3              goto start15;
+ 375   3            jump15:break;
+ 376   3          }
+ 377   2        }
+ 378   1      }
+ 379          
+ 380          
+ 381          /****************************************************音频模块*****************************************
+             -***************/
+ 382          void delay8um(unsigned char x)//8ms延时函数
+ 383          {
+ 384   1        unsigned char i,j;
+ 385   1        for(i=0;i<x;i++)
+ 386   1          for(j=0;j<1;j++);
+ 387   1      }
+ 388          
+ 389          void sound(unsigned char x,unsigned char y)//音调函数
+ 390          {
+ 391   1        unsigned char i;
+ 392   1        for(i=0;i<60;i++)
+ 393   1        {
+ 394   2          SPEAKER=0;delay8um(alltone[x][y]);  
+ 395   2          SPEAKER=1;delay8um(alltone[x][y]);
+ 396   2        }
+ 397   1      } 
+ 398          
+ 399          void play(unsigned char song[],unsigned char beat[])//播放歌曲
+ 400          {
+ 401   1        unsigned char i;
+ 402   1        i=0;
+ 403   1        while(i<34)
+ 404   1        {
+ 405   2          sound(level,song[i]);
+ 406   2          beat_125(beat[i]);
+ 407   2          i++;
+ 408   2        }
+ 409   1      
+ 410   1      }
+ 411          
+ 412          void beat_125(unsigned char x)//125ms节拍
+ 413          {
+ 414   1        unsigned char i,j,k;
+ 415   1        for(i=0;i<x;i++)
+ 416   1          for(j=0;j<125;j++)
+ 417   1            for(k=0;k<120;k++);
+ 418   1      }
+C51 COMPILER V9.56.0.0   PIANO                                                             03/18/2017 14:40:59 PAGE 8   
+
+ 419          
+ 420          void gap(unsigned char x)
+ 421          {
+ 422   1        unsigned char i,j,k;
+ 423   1        for(i=0;i<x;i++)
+ 424   1          for(j=0;j<20;j++)
+ 425   1            for(k=0;k<120;k++);
+ 426   1      }
+ 427          
+ 428          void record(unsigned char x)
+ 429          {
+ 430   1        if(temp)
+ 431   1        {
+ 432   2          cmklevel[t]=level;
+ 433   2          crec[t]=x;
+ 434   2          t++;
+ 435   2          temp=0;
+ 436   2        }
+ 437   1        if(t>4) t=0;
+ 438   1      }
+ 439          
+ 440          void playrec(unsigned char mklevel[],unsigned char rec[])
+ 441          {
+ 442   1        unsigned char i;
+ 443   1        i=0;
+ 444   1        while(i<5)
+ 445   1        {
+ 446   2          Displaylevel(mklevel[i],2+(3*i));
+ 447   2          Displaynote(rec[i],2+(3*i));
+ 448   2          sound(mklevel[i],rec[i]);
+ 449   2          gap();
+*** WARNING C209 IN LINE 449 OF Piano.c: '_gap': too few actual parameters
+ 450   2          i++;
+ 451   2        }
+ 452   1      }
+ 453          
+ 454          unsigned char Displaylevel(unsigned char x,unsigned char y)
+ 455          {
+ 456   1        switch(x)
+ 457   1        {
+ 458   2          case 0:
+ 459   2              LCMDisplayString(0,y,"L");
+ 460   2          break;
+ 461   2      
+ 462   2          case 1:
+ 463   2              LCMDisplayString(0,y,"M");
+ 464   2          break;
+ 465   2      
+ 466   2          case 2:
+ 467   2            LCMDisplayString(0,y,"H");
+ 468   2          break;
+ 469   2        }
+ 470   1      }
+*** WARNING C173 IN LINE 470 OF Piano.c: missing return-expression
+ 471          
+ 472          unsigned char Displaynote(unsigned char x,unsigned char y)
+ 473          {
+ 474   1        switch(x)
+ 475   1        {
+ 476   2          case 0:
+ 477   2              LCMDisplayString(1,y,"Do");
+ 478   2          break;
+C51 COMPILER V9.56.0.0   PIANO                                                             03/18/2017 14:40:59 PAGE 9   
+
+ 479   2      
+ 480   2          case 1:
+ 481   2              LCMDisplayString(1,y,"D#");
+ 482   2          break;
+ 483   2      
+ 484   2          case 2:
+ 485   2            LCMDisplayString(1,y,"Re");
+ 486   2          break;
+ 487   2      
+ 488   2          case 3:
+ 489   2            LCMDisplayString(1,y,"R#");
+ 490   2          break;
+ 491   2      
+ 492   2          case 4:
+ 493   2            LCMDisplayString(1,y,"Mi");
+ 494   2          break;
+ 495   2      
+ 496   2          case 5:
+ 497   2            LCMDisplayString(1,y,"Fa");
+ 498   2          break;
+ 499   2      
+ 500   2          case 6:
+ 501   2            LCMDisplayString(1,y,"So");
+ 502   2          break;
+ 503   2          
+ 504   2          case 7:
+ 505   2            LCMDisplayString(1,y,"La");
+ 506   2          break;
+ 507   2          
+ 508   2          case 8:
+ 509   2            LCMDisplayString(1,y,"Si");
+ 510   2          break;
+ 511   2        }
+ 512   1      }
+*** WARNING C173 IN LINE 512 OF Piano.c: missing return-expression
+ 513          
+ 514          /**************************************************液晶显示屏模块**********************************
+             -*******************/
+ 515          void LCMDelay(int ms)
+ 516          {
+ 517   1        unsigned int i,cnt;
+ 518   1        cnt = DelayConst * ms;
+ 519   1        for(i=0;i<cnt;i++);
+ 520   1      }
+ 521          
+ 522          unsigned char LCMReadState(void)
+ 523          {
+ 524   1        unsigned char state;
+ 525   1        LCM_E = 0;
+ 526   1        LCM_RS = 0;
+ 527   1        LCM_RW = 1;
+ 528   1        LCM_E = 1;
+ 529   1        _nop_();
+ 530   1        _nop_();
+ 531   1        state = LCM_DB;
+ 532   1        LCM_E = 0;
+ 533   1        return state;
+ 534   1      }
+ 535          
+ 536          void LCMClear(void)
+ 537          {
+ 538   1        LCMDelay(1);
+C51 COMPILER V9.56.0.0   PIANO                                                             03/18/2017 14:40:59 PAGE 10  
+
+ 539   1        LCM_E = 0;
+ 540   1        LCM_RS = 0;
+ 541   1        LCM_RW = 0;
+ 542   1        LCM_DB = 0x01;
+ 543   1        LCM_E = 1;
+ 544   1        _nop_();
+ 545   1        _nop_();
+ 546   1        LCM_E = 0;
+ 547   1        LCMDelay(1);
+ 548   1      }
+ 549          
+ 550          void LCMWriteCmd(unsigned char cmd)
+ 551          {
+ 552   1        LCMDelay(1);
+ 553   1        LCM_E = 0;
+ 554   1        LCM_RS = 0;
+ 555   1        LCM_RW = 0;
+ 556   1        LCM_DB = cmd;
+ 557   1        LCM_E = 1;
+ 558   1        _nop_();
+ 559   1        _nop_();
+ 560   1        LCM_E = 0;
+ 561   1      }
+ 562          
+ 563          void LCMWriteData(unsigned char dc)
+ 564          {
+ 565   1        while(LCMReadState() & BUSYFLAG);
+ 566   1        LCM_RS = 1;
+ 567   1        LCM_RW = 0;
+ 568   1        LCM_DB = dc;
+ 569   1        LCM_E = 1;
+ 570   1        _nop_();
+ 571   1        _nop_();
+ 572   1        LCM_E = 0;
+ 573   1      }
+ 574          
+ 575          void LCMInit(void)
+ 576          {
+ 577   1        LCMDelay(60); 
+ 578   1        LCMWriteCmd(0x38); 
+ 579   1        LCMDelay(5); 
+ 580   1        LCMWriteCmd(0x38); 
+ 581   1        LCMDelay(1); 
+ 582   1        LCMWriteCmd(0x38); 
+ 583   1        while(LCMReadState() & BUSYFLAG);
+ 584   1        LCMWriteCmd(0x08); 
+ 585   1        while(LCMReadState() & BUSYFLAG);
+ 586   1        LCMWriteCmd(0x01); 
+ 587   1        while(LCMReadState() & BUSYFLAG);
+ 588   1        LCMWriteCmd(0x06); 
+ 589   1        while(LCMReadState() & BUSYFLAG);
+ 590   1        LCMWriteCmd(0x0e); 
+ 591   1        while(LCMReadState() & BUSYFLAG);
+ 592   1      }
+ 593          
+ 594          void LCMGotoXY(unsigned char x,unsigned char y) 
+ 595          {
+ 596   1        unsigned char cmd;
+ 597   1        if(x==0)
+ 598   1        {
+ 599   2          cmd = 0x80 | y;
+ 600   2        }
+C51 COMPILER V9.56.0.0   PIANO                                                             03/18/2017 14:40:59 PAGE 11  
+
+ 601   1        else
+ 602   1        {
+ 603   2          cmd = 0x80 | 0x40 | y;
+ 604   2        }
+ 605   1        LCMWriteCmd(cmd);
+ 606   1        while(LCMReadState() & BUSYFLAG);
+ 607   1      }
+ 608          
+ 609          void LCMDisplayChar(unsigned char x,unsigned char y,unsigned char ch)
+ 610          {
+ 611   1        LCMGotoXY(x,y);
+ 612   1        LCMWriteData(ch);
+ 613   1      }
+ 614          
+ 615          void LCMDisplayString(unsigned char x,unsigned char y,unsigned char* str)
+ 616          {
+ 617   1        unsigned char ptr;
+ 618   1        ptr = 0;
+ 619   1        while(*(str+ptr) != 0)
+ 620   1        {
+ 621   2          LCMDisplayChar(x,(y+ptr),*(str+ptr));
+ 622   2          ptr++;
+ 623   2        }
+ 624   1      }
+ 625          
+ 626          
+ 627          /**************************************************行列式键盘模块**********************************
+             -*******************/
+ 628          
+ 629          //延时函数
+ 630          void delay(unsigned int i)
+ 631          {
+ 632   1        unsigned int j;
+ 633   1        for(j=0;j<i;j++);
+ 634   1      }
+ 635          
+ 636          
+ 637          //检测有无按键按下
+ 638          unsigned char checkkey()
+ 639          {
+ 640   1        unsigned char i;
+ 641   1        KEYBOARD=0xf0;
+ 642   1        i=KEYBOARD;
+ 643   1        i=i&0xf0;
+ 644   1        if(i==0xf0)return(0xff);
+ 645   1        else return(0);
+ 646   1      }
+ 647          
+ 648          //键盘扫描
+ 649          unsigned char keyscan()
+ 650          {
+ 651   1        unsigned char scancode;
+ 652   1        unsigned char codevalue;
+ 653   1        unsigned char m;
+ 654   1        unsigned char k;
+ 655   1        unsigned char i,j,c;
+ 656   1        unsigned char fuck[]={0xfe,0xfc,0xf8,0xf0};
+ 657   1        if(checkkey()==0xff)return (0xff);
+ 658   1        else
+ 659   1        {
+ 660   2          delay(20);
+ 661   2          if(checkkey()==0xff)return(0xff);
+C51 COMPILER V9.56.0.0   PIANO                                                             03/18/2017 14:40:59 PAGE 12  
+
+ 662   2          else
+ 663   2          {
+ 664   3            scancode=0xfe;
+ 665   3            for(i=0;i<4;i++)
+ 666   3            {
+ 667   4              scancode=fuck[i];
+ 668   4              k=0x10;
+ 669   4              KEYBOARD=scancode;
+ 670   4              m=0;
+ 671   4              for(j=0;j<4;j++)
+ 672   4              {
+ 673   5                c=KEYBOARD&0xf0;
+ 674   5                if((c&k)==0)
+ 675   5                {
+ 676   6                  codevalue=m+i;
+ 677   6                  while(checkkey()!=0xff);
+ 678   6                }
+ 679   5                else
+ 680   5                {
+ 681   6                  k=k<<1;
+ 682   6                  m=m+4;
+ 683   6                }
+ 684   5              }
+ 685   4            }
+ 686   3          } 
+ 687   2          return(codevalue);  
+ 688   2        }
+ 689   1      }
+*** WARNING C290 IN LINE 470 OF Piano.c: missing return value
+*** WARNING C290 IN LINE 512 OF Piano.c: missing return value
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2134    ----
+   CONSTANT SIZE    =    261    ----
+   XDATA SIZE       =    375    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      7      29
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  5 WARNING(S),  0 ERROR(S)

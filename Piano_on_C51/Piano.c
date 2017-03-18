@@ -117,7 +117,7 @@ void main(void)
 			
 			case 3:
 				start3:
-				for(;tk<4;)
+				for(;ms<4;)
 				{
 					switch(ms)
 					{
@@ -170,11 +170,6 @@ void main(void)
 				goto start3;
 			jump3:break;
 			
-			
-			
-				
-			break;
-			
 			case 4:
 				LCMClear();
 				LCMDisplayString(0,7,"Do#");
@@ -221,9 +216,7 @@ void main(void)
 				q=1;
 				goto start6;
 			jump6:break;
-				
-
-				
+								
 			case 7:
 				switch(ms)
 					{
@@ -247,9 +240,6 @@ void main(void)
 					}
 			break;
 
-			
-
-			
 			case 8:
 				LCMClear();
 				LCMDisplayString(0,7,"Re");
@@ -270,7 +260,7 @@ void main(void)
 				LCMClear();
 				LCMDisplayString(0,0,"Please play");
 				LCMDisplayString(1,9,"5 notes");
-
+				t=0;
 			break;
 			
 			case 11:
@@ -445,7 +435,6 @@ void record(unsigned char x)
 		temp=0;
 	}
 	if(t>4) t=0;
-
 }
 
 void playrec(unsigned char mklevel[],unsigned char rec[])
