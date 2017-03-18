@@ -1,3 +1,3 @@
 # Display
  Display foo.txt in current folder.(cat)
- A homework of NO.2
+ A task in HOMEWORK.2
